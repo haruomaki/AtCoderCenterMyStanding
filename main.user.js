@@ -1,63 +1,86 @@
 // ==UserScript==
 // @name         AtCoderCenterMyStanding
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  デフォルトで自身の順位付近を表示するようにします
 // @author       haruomaki
 // @match        https://atcoder.jp/*standings*
 // @match        https://atcoder.jp/*results*
-// @exclude      https://atcoder.jp/*standings/json
 // @grant        none
 // @license      MIT
 // ==/UserScript==
 
 // TODO: バーチャル順位表に対応
+// FIXME: レーティング変動ページでリンクが消滅
+// FIXME: ソート基準を順位以外にしたとき
 
 (function () {
     'use strict';
-    /* global vueStandings, vueResults, userScreenName */
+    /* global vueStandings, vueResults */
 
     // Configs
     // ---------------------------
-    const default_center = true;
+    const default_center = false;
     // ---------------------------
 
+    var first_click = false;
+
+    function exists(name) {
+        try {
+            return typeof window[name] !== 'undefined';
+        } catch (e) {
+            return false;
+        }
+    }
+
     var vue;
-    if (vueStandings) {
+    if (exists("vueStandings")) {
         vue = vueStandings;
-    } else if (vueResults) {
+    } else if (exists("vueResults")) {
         vue = vueResults;
     } else {
         console.error("順位データが読み込めません");
         return;
     }
 
+    function getRankElement() {
+        if (exists("vueStandings")) {
+            return document.querySelector("#standings-tbody .info td.standings-rank");
+        }
+        if (exists("vueResults")) {
+            return document.querySelector(".info td:nth-child(2)");
+        }
+    }
+
+    function myRank() {
+        const rank_cell = getRankElement();
+        const str = rank_cell.innerText;
+        const match = str.match(/\d+(?=\D*$)/);
+        return match ? parseInt(match[0], 10) : NaN;
+    }
+
     function clickActivePagination() {
         // ページネーション内のリンク要素を取得
-        const linkElement = document.querySelector('#vue-standings .pagination .active a')
+        const linkElement = document.querySelector('.pagination .active a')
         linkElement.click();
     }
 
     function center_me() {
-        clickActivePagination(); // 一度クリックしておかないと、なぜかページ移動が効かない
+        if (!first_click) {
+            first_click = true;
+            clickActivePagination(); // 一度クリックしておかないと、なぜかページ移動が効かない
+        }
 
-        const user_id = userScreenName;
-        const fl = vueStandings.standings.StandingsData.filter(data => data.UserScreenName == user_id);
-        if (fl.length == 0) {
-            console.info("自ユーザが順位表に掲載されていません");
-            return;
-        };
-        const mydata = fl[0];
-        const rank = mydata.Rank;
+        const rank = myRank();
 
         const target_page = Math.ceil(rank / vue.perPage);
-        console.debug("center me:", { user_id, rank, target_page });
+        console.debug("center me:", { rank, target_page });
         vue.page = target_page; // これで遷移
     }
 
     function main() {
         // 自身の順位をクリックするとページ移動
-        const rank_cell = document.querySelector("#standings-tbody .info td.standings-rank")
+        const rank_cell = getRankElement();
         rank_cell.innerHTML = "<a href>" + rank_cell.innerHTML + "</a>"
         rank_cell.addEventListener('click', function (event) {
             event.preventDefault();
