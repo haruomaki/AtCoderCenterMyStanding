@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         AtCoderCenterMyStanding
+// @name         AtCoder Center Your Standing
 // @namespace    http://tampermonkey.net/
 // @version      1.4
 // @description  Displays the standings page centered around your rank by default in AtCoder contests.
@@ -8,7 +8,7 @@
 // @match        https://atcoder.jp/contests/*/standings/virtual
 // @match        https://atcoder.jp/contests/*/results
 // @grant        none
-// @license      MIT
+// @license      CC0
 // ==/UserScript==
 
 (function () {
