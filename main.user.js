@@ -1,16 +1,15 @@
 // ==UserScript==
 // @name         AtCoderCenterMyStanding
 // @namespace    http://tampermonkey.net/
-// @version      1.3
-// @description  デフォルトで自身の順位付近を表示するようにします
+// @version      1.4
+// @description  Displays the standings page centered around your rank by default in AtCoder contests.
 // @author       haruomaki
-// @match        https://atcoder.jp/*standings*
-// @match        https://atcoder.jp/*results*
+// @match        https://atcoder.jp/contests/*/standings
+// @match        https://atcoder.jp/contests/*/standings/virtual
+// @match        https://atcoder.jp/contests/*/results
 // @grant        none
 // @license      MIT
 // ==/UserScript==
-
-// TODO: バーチャル順位表に対応
 
 (function () {
     'use strict';
@@ -25,11 +24,7 @@
     var current_row = null;
 
     function exists(name) {
-        try {
-            return typeof window[name] !== 'undefined';
-        } catch (e) {
-            return false;
-        }
+        return typeof window[name] !== 'undefined';
     }
 
     var vue;
@@ -85,13 +80,13 @@
         const row = getMyStanding();
         if (row == null) return;
         //console.debug("クリック可能にします:", row);
-        row.setAttribute('title', 'Click to center my standing');
+        row.setAttribute('title', 'Click to center your standing');
         row.addEventListener('click', center_me);
         current_row = row;
     }
 
     function main() {
-        // 自身の順位をクリックするとページ移動
+        // 自身の行をクリックするとページ移動
         remakeClickable();
 
         // 自順位の行が移動もしくは生成されるたびにremake
