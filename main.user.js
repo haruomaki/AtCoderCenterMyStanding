@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoderCenterMyStanding
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  デフォルトで自身の順位付近を表示するようにします
 // @author       haruomaki
 // @match        https://atcoder.jp/*standings*
@@ -11,7 +11,6 @@
 // ==/UserScript==
 
 // TODO: バーチャル順位表に対応
-// FIXME: レーティング変動ページでリンクが消滅
 // FIXME: ソート基準を順位以外にしたとき
 
 (function () {
@@ -20,10 +19,11 @@
 
     // Configs
     // ---------------------------
-    const default_center = false;
+    const default_center = true;
     // ---------------------------
 
     var first_click = false;
+    var current_row = null;
 
     function exists(name) {
         try {
@@ -52,6 +52,10 @@
         }
     }
 
+    function getMyStanding() {
+        return document.querySelector("tr.info");
+    }
+
     function myRank() {
         const rank_cell = getRankElement();
         const str = rank_cell.innerText;
@@ -78,14 +82,47 @@
         vue.page = target_page; // これで遷移
     }
 
+    function remakeClickable() {
+        if (current_row != null) {
+            //console.debug("クリック機能削除:", current_row);
+            current_row.removeAttribute('title');
+            current_row.removeEventListener('click', center_me);
+        }
+        const row = getMyStanding();
+        //console.debug("クリック可能にします:", row);
+        row.setAttribute('title', 'Click to center my standing');
+        row.addEventListener('click', center_me);
+        current_row = row;
+    }
+
     function main() {
         // 自身の順位をクリックするとページ移動
-        const rank_cell = getRankElement();
-        rank_cell.innerHTML = "<a href>" + rank_cell.innerHTML + "</a>"
-        rank_cell.addEventListener('click', function (event) {
-            event.preventDefault();
-            center_me();
+        remakeClickable();
+
+        // クリック可能なクラスを定義
+        const clickableClassName = 'info';
+
+        // 自順位の行が移動もしくは生成されるたびにremake
+        const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList') {
+                    // 新しいノードが追加された場合
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === 1 && node.classList.contains('info')) {
+                            console.debug('<tr class="info"> が追加されました');
+                            remakeClickable();
+                        }
+                    });
+                } else if (mutation.type === 'attributes' && mutation.target.classList.contains('info')) {
+                    // 既存のノードにinfoクラスが付与された場合
+                    console.debug('<tr> に infoクラスが付与されました');
+                    remakeClickable();
+                }
+            }
         });
+
+        // 監視を開始する
+        observer.observe(document.body, { childList: true, attributes: true, attributeFilter: ['class'], subtree: true });
 
         if (default_center) center_me();
     }
